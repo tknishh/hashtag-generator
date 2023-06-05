@@ -29,7 +29,6 @@ def main():
 
             if st.button("Generate Hashtags"):
                 caption = generate_caption(file)
-                st.subheader("Generated Caption:")
                 st.write(caption)
 
                 hashtags = generate_hashtags(caption)
