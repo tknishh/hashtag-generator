@@ -69,8 +69,7 @@ def generate_hashtags(caption):
         stop=None
     )
 
-    choices = response.choices[0].logprobs.tokens
-    hashtags = [choice.strip() for choice in choices if choice.startswith("#")]
+    hashtags = re.findall(r"#\w+", response.choices[0].text)
 
     return hashtags
 
