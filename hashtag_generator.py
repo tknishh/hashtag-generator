@@ -3,7 +3,7 @@ from PIL import Image
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from dotenv import load_dotenv
 import openai
-import os
+import os, re
 
 # Load environment variables
 load_dotenv()
