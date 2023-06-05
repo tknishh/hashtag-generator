@@ -1,5 +1,5 @@
 import streamlit as st
-from PIL import Image, ImageEnhance
+from PIL import Image
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from dotenv import load_dotenv
 import openai
@@ -9,11 +9,11 @@ import os
 load_dotenv()
 
 # Set up OpenAI API
-OPENAI_API_KEY = os.getenv("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")
-openai.api_key = OPENAI_API_KEY
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = "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"
 
 # Set up Image Captioning Model
-IMAGE_CAPTION_MODEL_NAME = "microsoft/git-base-coco"
+IMAGE_CAPTION_MODEL_NAME = "microsoft/git-base"
 tokenizer_caption = AutoTokenizer.from_pretrained(IMAGE_CAPTION_MODEL_NAME)
 model_caption = AutoModelForCausalLM.from_pretrained(IMAGE_CAPTION_MODEL_NAME)
 
@@ -38,17 +38,22 @@ def main():
                     st.write(f"{i}. {hashtag}")
                 st.markdown("---")
 
+# Function to preprocess image
+def preprocess_image(image_path):
+    image = Image.open(image_path)
+    image = image.resize((224, 224))  # Resize image to match the input size of the model
+
+    return image
+
 # Function to generate image caption
 def generate_caption(image_path):
-    image = Image.open(image_path)
+    image = preprocess_image(image_path)
+    inputs = tokenizer_caption.encode_plus("", return_tensors="pt", padding=True, truncation=True)
 
-    input_text = "generate a caption for the image:"
-    inputs = tokenizer_caption(image_path, return_tensors="pt", padding=True, truncation=True)
-    input_ids = inputs.input_ids
-
-    output = model_caption.generate(input_ids=input_ids)
+    # Generate the caption
+    output = model_caption.generate(input_ids=inputs.input_ids, attention_mask=inputs.attention_mask)
     caption = tokenizer_caption.decode(output[0], skip_special_tokens=True)
-    
+
     return caption
 
 # Function to generate hashtags using OpenAI GPT-3.5 Turbo
@@ -60,12 +65,11 @@ def generate_hashtags(caption):
         max_tokens=50,
         n=10,
         temperature=0.7,
-        stop=None,
-        log_level="info"
+        stop=None
     )
-    
-    hashtags = [hashtag['choices'][0]['text'].strip() for hashtag in response['choices']]
-    
+
+    hashtags = [choice['text'].strip() for choice in response['choices'][0]['logprobs']['tokens']]
+
     return hashtags
 
 # Main function
