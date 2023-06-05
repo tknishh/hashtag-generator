@@ -1,0 +1,7 @@
+streamlit
+Pillow
+transformers
+python-dotenv
+openai
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch

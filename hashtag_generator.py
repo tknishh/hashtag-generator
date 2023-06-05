@@ -1,43 +1,73 @@
+import os
 import torch
-from PIL import Image
 import requests
-from transformers import T5ForConditionalGeneration, T5Tokenizer
+from PIL import Image
+import streamlit as st
+import openai
+from transformers import AutoTokenizer, T5ForConditionalGeneration
 
+# Set up OpenAI API
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = OPENAI_API_KEY
 
+# Set up Image Captioning Model
+IMAGE_CAPTION_MODEL_NAME = "mrm8488/t5-base-finetuned-ms-coco-caption-generator"
+tokenizer_caption = AutoTokenizer.from_pretrained(IMAGE_CAPTION_MODEL_NAME)
+model_caption = T5ForConditionalGeneration.from_pretrained(IMAGE_CAPTION_MODEL_NAME)
+
+# Streamlit Application
+def main():
+    st.title("Image Hashtag Generator")
+
+    uploaded_files = st.file_uploader("Upload image(s)", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
+    if uploaded_files:
+        for file in uploaded_files:
+            image = Image.open(file)
+            st.image(image, caption='Uploaded Image', use_column_width=True)
+
+            if st.button("Generate Hashtags"):
+                caption = generate_caption(file)
+                st.subheader("Generated Caption:")
+                st.write(caption)
+
+                hashtags = generate_hashtags(caption)
+                st.subheader("Generated Hashtags:")
+                for i, hashtag in enumerate(hashtags, 1):
+                    st.write(f"{i}. {hashtag}")
+                st.markdown("---")
+
+# Function to generate image caption
 def generate_caption(image_path):
-    model = T5ForConditionalGeneration.from_pretrained("mrm8488/t5-base-finetuned-caption-generator")
-    tokenizer = T5Tokenizer.from_pretrained("mrm8488/t5-base-finetuned-caption-generator")
-
     image = Image.open(image_path)
-    image = image.convert("RGB")
-    image_tensor = torch.tensor([torchvision.transforms.functional.to_tensor(image)])
+    image_tensor = transforms.ToTensor()(image).unsqueeze(0)
+    
+    input_text = "generate a caption for the image:"
+    inputs = tokenizer_caption(image_tensor, return_tensors="pt", padding=True, truncation=True)
+    input_ids = inputs.input_ids
 
-    input_ids = tokenizer.encode("generate a caption for the image:", return_tensors="pt")
-    input_ids = torch.cat([input_ids, image_tensor], dim=1)
-
-    output = model.generate(input_ids=input_ids)
-    caption = tokenizer.decode(output[0], skip_special_tokens=True)
-
+    output = model_caption.generate(input_ids=input_ids)
+    caption = tokenizer_caption.decode(output[0], skip_special_tokens=True)
+    
     return caption
 
+# Function to generate hashtags using OpenAI GPT-3.5 Turbo
+def generate_hashtags(caption):
+    prompt = f"Generate 10 engaging hashtags for the image caption: {caption}"
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=prompt,
+        max_tokens=50,
+        n=10,
+        temperature=0.7,
+        stop=None,
+        log_level="info"
+    )
+    
+    hashtags = [hashtag['choices'][0]['text'].strip() for hashtag in response['choices']]
+    
+    return hashtags
 
-def generate_hashtags(description):
-    description = description.lower()
-    hashtags = ['#' + word for word in description.split()]
-    top_10_hashtags = hashtags[:10]
-    return top_10_hashtags
-
-
-def main():
-    image_path = "levi-arnold-AkoHPGMV4X8-unsplash.jpg"
-    caption = generate_caption(image_path)
-    hashtags = generate_hashtags(caption)
-
-    print("Caption:")
-    print(caption)
-    print("\nHashtags:")
-    print(hashtags)
-
-
+# Main function
 if __name__ == "__main__":
+    st.set_page_config(layout="wide")
     main()
