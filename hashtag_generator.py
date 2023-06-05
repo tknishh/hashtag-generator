@@ -1,19 +1,21 @@
-import os
-import torch
-import requests
-from PIL import Image
 import streamlit as st
+from PIL import Image, ImageEnhance
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from dotenv import load_dotenv
 import openai
-from transformers import AutoTokenizer, T5ForConditionalGeneration
+import os
+
+# Load environment variables
+load_dotenv()
 
 # Set up OpenAI API
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = os.getenv("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")
 openai.api_key = OPENAI_API_KEY
 
 # Set up Image Captioning Model
-IMAGE_CAPTION_MODEL_NAME = "mrm8488/t5-base-finetuned-ms-coco-caption-generator"
+IMAGE_CAPTION_MODEL_NAME = "microsoft/git-base-coco"
 tokenizer_caption = AutoTokenizer.from_pretrained(IMAGE_CAPTION_MODEL_NAME)
-model_caption = T5ForConditionalGeneration.from_pretrained(IMAGE_CAPTION_MODEL_NAME)
+model_caption = AutoModelForCausalLM.from_pretrained(IMAGE_CAPTION_MODEL_NAME)
 
 # Streamlit Application
 def main():
@@ -39,10 +41,9 @@ def main():
 # Function to generate image caption
 def generate_caption(image_path):
     image = Image.open(image_path)
-    image_tensor = transforms.ToTensor()(image).unsqueeze(0)
-    
+
     input_text = "generate a caption for the image:"
-    inputs = tokenizer_caption(image_tensor, return_tensors="pt", padding=True, truncation=True)
+    inputs = tokenizer_caption(image_path, return_tensors="pt", padding=True, truncation=True)
     input_ids = inputs.input_ids
 
     output = model_caption.generate(input_ids=input_ids)
