@@ -57,6 +57,7 @@ def generate_caption(image_path):
     return caption
 
 # Function to generate hashtags using OpenAI GPT-3.5 Turbo
+# Function to generate hashtags using OpenAI GPT-3.5 Turbo
 def generate_hashtags(caption):
     prompt = f"Generate 10 engaging hashtags for the image caption: {caption}"
     response = openai.Completion.create(
@@ -68,15 +69,10 @@ def generate_hashtags(caption):
         stop=None
     )
 
-    response_json = response.json()
-    hashtags = []
+    choices = response.choices[0].logprobs.tokens
+    hashtags = [choice.strip() for choice in choices if choice.startswith("#")]
 
-    for choice in response_json['choices']:
-        choice_text = choice['text'].strip()
-        if choice_text.startswith("#"):
-            hashtags.append(choice_text)
-
-    return hashtags, response_json
+    return hashtags
 
 # Main function
 if __name__ == "__main__":
