@@ -1,71 +1,78 @@
 import streamlit as st
-from PIL import Image, ImageEnhance
+from PIL import Image
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from dotenv import load_dotenv
 import openai
-import os
+import os, re
 
-# Load environment variables from .env file
+# Load environment variables
 load_dotenv()
 
-# OpenAI API credentials
+# Set up OpenAI API
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 openai.api_key = "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"
 
-# Microsoft/beit-base-captioning model from Hugging Face
-caption_model_name = "microsoft/git-base-coco"
+# Set up Image Captioning Model
+IMAGE_CAPTION_MODEL_NAME = "microsoft/git-base"
+tokenizer_caption = AutoTokenizer.from_pretrained(IMAGE_CAPTION_MODEL_NAME)
+model_caption = AutoModelForCausalLM.from_pretrained(IMAGE_CAPTION_MODEL_NAME)
 
-# Load Microsoft/beit-base-captioning model
-caption_tokenizer = AutoTokenizer.from_pretrained(caption_model_name)
-caption_model = AutoModelForCausalLM.from_pretrained(caption_model_name)
+# Streamlit Application
+def main():
+    st.title("Image Hashtag Generator")
 
-# Generate caption for the uploaded image using Microsoft/beit-base-captioning model
-def generate_caption(image):
-    inputs = caption_tokenizer(image, return_tensors="pt")
-    with torch.no_grad():
-        caption_output = caption_model.generate(**inputs)
-    caption = caption_tokenizer.decode(caption_output[0], skip_special_tokens=True)
+    uploaded_files = st.file_uploader("Upload image(s)", accept_multiple_files=True, type=["png", "jpg", "jpeg"])
+    if uploaded_files:
+        for file in uploaded_files:
+            image = Image.open(file)
+            st.image(image, caption='Uploaded Image', use_column_width=True)
+
+            if st.button("Generate Hashtags"):
+                caption = generate_caption(file)
+                st.write(caption)
+
+                hashtags = generate_hashtags(caption)
+                st.subheader("Generated Hashtags:")
+                for i, hashtag in enumerate(hashtags, 1):
+                    st.write(f"{i}. {hashtag}")
+                st.markdown("---")
+
+# Function to preprocess image
+def preprocess_image(image_path):
+    image = Image.open(image_path)
+    image = image.resize((224, 224))  # Resize image to match the input size of the model
+
+    return image
+
+# Function to generate image caption
+def generate_caption(image_path):
+    image = preprocess_image(image_path)
+    inputs = tokenizer_caption.encode_plus("", return_tensors="pt", padding=True, truncation=True)
+
+    # Generate the caption
+    output = model_caption.generate(input_ids=inputs.input_ids, attention_mask=inputs.attention_mask)
+    caption = tokenizer_caption.decode(output[0], skip_special_tokens=True)
+
     return caption
 
-# Generate hashtags using OpenAI GPT-3.5 Turbo chat model
+# Function to generate hashtags using OpenAI GPT-3.5 Turbo
+# Function to generate hashtags using OpenAI GPT-3.5 Turbo
 def generate_hashtags(caption):
-    prompt = f"What are the best hashtags for the caption: '{caption}'?"
+    prompt = f"Generate 10 engaging hashtags for the image caption: {caption}"
     response = openai.Completion.create(
         engine="text-davinci-003",
         prompt=prompt,
         max_tokens=50,
-        n=1,
-        stop=None,
+        n=10,
+        temperature=0.7,
+        stop=None
     )
-    hashtags = response.choices[0].text
-    return hashtags.split("#")[1:]  # Split and remove the empty hashtag at the beginning
 
-# Streamlit web application
-def main():
-    st.title("Image Caption and Hashtag Generator")
+    hashtags = re.findall(r"#\w+", response.choices[0].text)
 
-    # Image upload
-    uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+    return hashtags
 
-    if uploaded_image is not None:
-        image = Image.open(uploaded_image)
-        st.image(image, caption="Uploaded Image", use_column_width=True)
-
-        # Generate caption
-        caption = generate_caption(image)
-
-        # Display caption
-        st.subheader("Generated Caption:")
-        st.write(caption)
-
-        # Generate hashtags
-        hashtags = generate_hashtags(caption)
-
-        # Display hashtags
-        st.subheader("Generated Hashtags:")
-        for i, hashtag in enumerate(hashtags[:10]):
-            st.write(f"{i+1}. #{hashtag.strip()}")
-
-# Run the Streamlit web application
+# Main function
 if __name__ == "__main__":
     st.set_page_config(layout="wide")
     main()
