@@ -10,7 +10,7 @@ load_dotenv()
 
 # Set up OpenAI API
 # OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = "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"
+openai.api_key = "OPENAI_API_KEY"
 
 # Set up Image Captioning Model
 IMAGE_CAPTION_MODEL_NAME = "microsoft/git-base"
