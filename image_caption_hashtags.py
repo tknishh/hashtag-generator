@@ -7,7 +7,7 @@ import torch
 chat_model = "gpt-3.5-turbo"
 
 # OpenAI API credentials
-openai.api_key = "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"
+openai.api_key = "OPEN_API_KEY"
 
 # Load the pre-trained image captioning model and tokenizer
 model = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-image-captioning")

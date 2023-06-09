@@ -9,7 +9,7 @@ import os
 load_dotenv()
 
 # Set up OpenAI API credentials
-openai.api_key = "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"
+openai.api_key = "OPEN_API_KEY"
 
 
 # Set up the model and processor
